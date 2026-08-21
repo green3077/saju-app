@@ -125,6 +125,22 @@ function buildDataText(r) {
   return lines.join("\n");
 }
 
+// 구글 API의 429(RESOURCE_EXHAUSTED) 오류 본문에는 보통
+// details[].{"@type":".../google.rpc.RetryInfo", retryDelay:"20s"} 형태로
+// 몇 초 후에 재시도하면 되는지가 함께 온다. 있으면 그 값을 그대로 존중한다.
+function parseRetryDelayMs(errBodyText) {
+  try {
+    const data = JSON.parse(errBodyText);
+    const details = data?.error?.details || [];
+    const retryInfo = details.find((d) => typeof d.retryDelay === "string");
+    if (!retryInfo) return null;
+    const seconds = parseFloat(retryInfo.retryDelay);
+    return Number.isFinite(seconds) ? seconds * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 async function callGeminiModel(model, body) {
   const res = await fetch(`${PROXY_BASE}/v1beta/models/${model}:generateContent`, {
     method: "POST",
@@ -132,8 +148,10 @@ async function callGeminiModel(model, body) {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
+    const errBodyText = await res.text().catch(() => "");
     const err = new Error(`Gemini ${model} 응답 오류: ${res.status}`);
     err.status = res.status;
+    err.retryDelayMs = parseRetryDelayMs(errBodyText);
     throw err;
   }
   const data = await res.json();
@@ -142,8 +160,13 @@ async function callGeminiModel(model, body) {
   return text;
 }
 
-const TRANSIENT_STATUS = [429, 503]; // 속도 제한/모델 과부하: 같은 모델로 짧게 재시도할 가치가 있음
-const TRANSIENT_RETRY_DELAYS_MS = [800, 1600];
+// 429(속도 제한)/503(모델 과부하)은 같은 모델로 잠시 후 다시 시도할 가치가 있는 일시적
+// 오류다. 여러 앱이 같은 프록시 키를 공유하다 보니 몰리는 순간이 있어, 짧은 재시도로
+// 부족할 수 있으므로 백오프 간격을 넉넉히 둔다(서버가 retryDelay를 알려주면 그 값을
+// 우선 사용, 상한만 둔다).
+const TRANSIENT_STATUS = [429, 503];
+const TRANSIENT_RETRY_DELAYS_MS = [2000, 5000, 10000];
+const MAX_RETRY_DELAY_MS = 15000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -164,7 +187,8 @@ async function analyzeSaju(sajuResult) {
         lastErr = e;
         const isTransient = TRANSIENT_STATUS.includes(e.status);
         if (!isTransient || attempt === TRANSIENT_RETRY_DELAYS_MS.length) break;
-        await sleep(TRANSIENT_RETRY_DELAYS_MS[attempt]);
+        const delay = Math.min(e.retryDelayMs || TRANSIENT_RETRY_DELAYS_MS[attempt], MAX_RETRY_DELAY_MS);
+        await sleep(delay);
       }
     }
   }
