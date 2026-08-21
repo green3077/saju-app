@@ -125,6 +125,13 @@ async function callGeminiModel(model, body) {
   return text;
 }
 
+const TRANSIENT_STATUS = [429, 503]; // 속도 제한/모델 과부하: 같은 모델로 짧게 재시도할 가치가 있음
+const TRANSIENT_RETRY_DELAYS_MS = [800, 1600];
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function analyzeSaju(sajuResult) {
   const body = {
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
@@ -133,10 +140,15 @@ async function analyzeSaju(sajuResult) {
   };
   let lastErr;
   for (const model of MODEL_FALLBACKS) {
-    try {
-      return await callGeminiModel(model, body);
-    } catch (e) {
-      lastErr = e;
+    for (let attempt = 0; attempt <= TRANSIENT_RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        return await callGeminiModel(model, body);
+      } catch (e) {
+        lastErr = e;
+        const isTransient = TRANSIENT_STATUS.includes(e.status);
+        if (!isTransient || attempt === TRANSIENT_RETRY_DELAYS_MS.length) break;
+        await sleep(TRANSIENT_RETRY_DELAYS_MS[attempt]);
+      }
     }
   }
   throw lastErr;
