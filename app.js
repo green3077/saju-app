@@ -243,13 +243,15 @@ function updateProgress(pct) {
   $("loadingBarFill").style.width = rounded + "%";
 }
 function startFakeProgress() {
-  let pct = 0;
-  updateProgress(0);
+  const start = Date.now();
+  const CAP = 97; // 실제 응답이 올 때까지는 100%를 찍지 않고 이 근처까지만 서서히 다가감
+  const TAU_MS = 40000; // 클수록 뒤로 갈수록 더 천천히 올라감 (분석이 1~2분 걸리는 것을 감안)
+  updateProgress(1);
   progressTimer = setInterval(() => {
-    pct += Math.max(0.4, (92 - pct) * 0.06);
-    if (pct > 92) pct = 92;
+    const elapsed = Date.now() - start;
+    const pct = 1 + (CAP - 1) * (1 - Math.exp(-elapsed / TAU_MS));
     updateProgress(pct);
-  }, 220);
+  }, 200);
 }
 function finishFakeProgress() {
   if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
