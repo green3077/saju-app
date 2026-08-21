@@ -2,7 +2,12 @@
 // 공유 Cloudflare Worker 프록시를 그대로 재사용한다 — 실제 Gemini 키는 그 Worker
 // 안에만 있고, 이 앱은 키를 전혀 다루지 않는다.
 const PROXY_BASE = "https://cigar-log-gemini-proxy.cigar-log-gemini-proxy.workers.dev";
-const MODEL_FALLBACKS = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"];
+// gemini-3.6-flash를 우선 사용하고, 이 모델명이 유효하지 않은 계정/환경이면 gemini-flash-latest로
+// 자동 폴백한다.
+// (2026-08-21: gemini-2.5-flash/gemini-2.0-flash는 구글이 완전히 폐지해 항상 "no longer
+// available" 404를 반환하는 것이 확인되어 폴백 목록에서 제거함 — cigar-log 프로젝트에서
+// 먼저 발견/수정된 것과 동일한 원인)
+const MODEL_FALLBACKS = ["gemini-3.6-flash", "gemini-flash-latest"];
 
 // 사용자에게는 절대 노출되지 않는, 명리학자 겸 강사 역할의 시스템 프롬프트.
 // 계산(사주 원국/오행/십신/대운)은 이미 saju.js가 결정론적으로 끝낸 뒤이므로,
