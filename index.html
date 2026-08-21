@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>도원동 왕꽃 선녀 — AI 명리 인사이트</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%230e0d0c' stroke='%23c9a86a' stroke-width='3'/%3E%3Ctext x='50' y='66' font-size='52' text-anchor='middle' fill='%23c9a86a' font-family='serif'%3E命%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="gateOverlay">
+  <div class="gate-box">
+    <span class="brand-mark">命</span>
+    <h2>도원동 왕꽃 선녀</h2>
+    <p>비밀번호를 입력해 주세요</p>
+    <form id="gateForm">
+      <input type="password" id="gatePassword" inputmode="numeric" autocomplete="off" />
+      <button type="submit" class="btn-primary">입장</button>
+    </form>
+    <p class="error-text hidden" id="gateError">비밀번호가 올바르지 않습니다.</p>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+
+  <header class="top-header">
+    <div class="brand">
+      <span class="brand-mark">命</span>
+      <div class="brand-text">
+        <h1>도원동 왕꽃 선녀</h1>
+        <p>AI 명리 인사이트</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ===== 입력 화면 ===== -->
+    <section id="screen-form" class="screen">
+      <p class="intro">
+        생년월일과 태어난 시각, 태어난 곳을 입력하면 정확한 만세력 계산을 바탕으로
+        사주 원국을 산출하고, AI가 명리학적 근거를 들어 해설해 드립니다.
+      </p>
+
+      <form id="sajuForm">
+
+        <div class="field-group">
+          <label class="field-label">성별</label>
+          <div class="segmented" data-name="gender">
+            <button type="button" class="seg-btn is-active" data-value="male">남성</button>
+            <button type="button" class="seg-btn" data-value="female">여성</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">달력 종류</label>
+          <div class="segmented" data-name="calendarType">
+            <button type="button" class="seg-btn is-active" data-value="solar">양력</button>
+            <button type="button" class="seg-btn" data-value="lunar">음력</button>
+          </div>
+        </div>
+
+        <div class="field-group" id="solarDateGroup">
+          <label class="field-label" for="solarDate">생년월일 (양력)</label>
+          <input type="date" id="solarDate" min="1900-01-01" max="2026-12-31" value="1995-01-01" />
+        </div>
+
+        <div class="field-group hidden" id="lunarDateGroup">
+          <label class="field-label">생년월일 (음력)</label>
+          <div class="row-3">
+            <select id="lunarYear"></select>
+            <select id="lunarMonth"></select>
+            <select id="lunarDay"></select>
+          </div>
+          <label class="checkbox-row">
+            <input type="checkbox" id="lunarLeap" />
+            <span>윤달(閏月)입니다</span>
+          </label>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="birthTime">태어난 시각</label>
+          <div class="row-inline">
+            <input type="time" id="birthTime" value="12:00" />
+            <label class="checkbox-row">
+              <input type="checkbox" id="timeUnknown" />
+              <span>시간을 모릅니다</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="placeSelect">태어난 곳</label>
+          <select id="placeSelect"></select>
+          <label class="checkbox-row">
+            <input type="checkbox" id="applyTst" checked />
+            <span>진태양시(眞太陽時) 보정 적용</span>
+          </label>
+          <p class="hint">경도에 따른 실제 태양시 차이를 보정합니다. 정확한 출생지를 모르면 끄셔도 됩니다.</p>
+        </div>
+
+        <div class="field-group">
+          <label class="checkbox-row">
+            <input type="checkbox" id="consentSave" required />
+            <span>입력하신 정보와 AI 해설 결과를 운영자 기록용으로 저장하는 데 동의합니다. (필수)</span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">사주 보기</button>
+        <p class="error-text hidden" id="formError"></p>
+      </form>
+    </section>
+
+    <!-- ===== 로딩 화면 ===== -->
+    <section id="screen-loading" class="screen hidden">
+      <div class="loading-box">
+        <img src="loading.jpg" alt="" class="loading-image" />
+        <div class="loading-percent" id="loadingPercent">0%</div>
+        <div class="loading-bar"><div class="loading-bar-fill" id="loadingBarFill"></div></div>
+        <p id="loadingText">만세력을 계산하는 중입니다…</p>
+      </div>
+    </section>
+
+    <!-- ===== 결과 화면 ===== -->
+    <section id="screen-result" class="screen hidden">
+
+      <div class="result-summary" id="resultSummary"></div>
+
+      <h2 class="section-title">사주 원국</h2>
+      <div class="pillars-grid" id="pillarsGrid"></div>
+
+      <h2 class="section-title">오행 분포</h2>
+      <div class="element-bars" id="elementBars"></div>
+
+      <h2 class="section-title">대운(大運) 흐름</h2>
+      <div class="daewoon-track" id="daewoonTrack"></div>
+
+      <h2 class="section-title">명리학적 해설</h2>
+      <div class="ai-analysis" id="aiAnalysis"></div>
+
+      <button type="button" class="btn-secondary" id="restartBtn">다시 보기</button>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>이 해석은 전통 명리학 이론에 근거한 참고용 해설이며, 미래를 확정하는 예언이 아닙니다.</p>
+    <p class="version-tag" id="versionTag"></p>
+  </footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/lunisolar@2.6.0/dist/lunisolar.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lunisolar@2.6.0/plugins/char8ex.js"></script>
+<script>lunisolar.extend(lunisolarPluginChar8ex);</script>
+<script src="places.js"></script>
+<script src="saju.js"></script>
+<script src="gemini.js"></script>
+<script src="drivelog.js"></script>
+<script src="markdown.js"></script>
+<script src="version.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
