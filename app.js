@@ -297,7 +297,7 @@ async function handleSubmit(e) {
   renderResult(result);
   $("aiAnalysis").innerHTML = "";
 
-  $("loadingText").textContent = "AI가 명리학적으로 해설하는 중입니다… (내용이 깊어 1~2분 정도 걸릴 수 있습니다)";
+  $("loadingText").textContent = "AI가 명리학적으로 해설하는 중입니다… (10초 내외)";
   let aiText = null;
   try {
     aiText = await GeminiSaju.analyzeSaju(result);
