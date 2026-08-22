@@ -141,6 +141,19 @@ function parseRetryDelayMs(errBodyText) {
   }
 }
 
+// 구글/프록시가 알려주는 실제 오류 사유(error.message)를 최대한 뽑아내, 상태 코드만
+// 보여줄 때보다 화면에서 바로 원인을 짐작할 수 있게 한다.
+function friendlyErrorReason(errBodyText) {
+  if (!errBodyText) return "";
+  try {
+    const data = JSON.parse(errBodyText);
+    if (data?.error?.message) return data.error.message;
+  } catch {
+    // JSON이 아니면 본문 일부를 그대로 보여준다.
+  }
+  return errBodyText.slice(0, 200);
+}
+
 async function callGeminiModel(model, body) {
   const res = await fetch(`${PROXY_BASE}/v1beta/models/${model}:generateContent`, {
     method: "POST",
@@ -149,7 +162,8 @@ async function callGeminiModel(model, body) {
   });
   if (!res.ok) {
     const errBodyText = await res.text().catch(() => "");
-    const err = new Error(`Gemini ${model} 응답 오류: ${res.status}`);
+    const reason = friendlyErrorReason(errBodyText);
+    const err = new Error(`Gemini ${model} 응답 오류: ${res.status}${reason ? ` - ${reason}` : ""}`);
     err.status = res.status;
     err.retryDelayMs = parseRetryDelayMs(errBodyText);
     throw err;
