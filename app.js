@@ -303,7 +303,14 @@ async function handleSubmit(e) {
     aiText = await GeminiSaju.analyzeSaju(result);
     $("aiAnalysis").innerHTML = renderMarkdown(aiText);
   } catch (err) {
-    $("aiAnalysis").innerHTML = `<p style="color:var(--text-faint)">AI 해설을 불러오지 못했습니다 (${err.message}). 위의 사주 원국 데이터는 정상적으로 계산되었으니, 잠시 후 다시 시도해 주세요.</p>`;
+    // 구글 Gemini API는 요청이 거쳐가는 네트워크 경로(지역)에 따라 특정 국가를
+    // 지원하지 않는다는 오류를 낼 때가 있다. 재시도로는 해결되지 않고 네트워크를
+    // 바꿔봐야 하는 문제라 원인이 뭔지 바로 알 수 있게 별도 안내를 보여준다.
+    const isLocationBlocked = /location is not supported/i.test(err.message);
+    const guidance = isLocationBlocked
+      ? "현재 접속 중인 와이파이/데이터망의 경로 문제로 AI 서비스 접속이 일시적으로 막혔습니다. 와이파이↔데이터 전환 또는 다른 네트워크로 바꿔서 다시 시도해 주세요."
+      : `AI 해설을 불러오지 못했습니다 (${err.message}). 잠시 후 다시 시도해 주세요.`;
+    $("aiAnalysis").innerHTML = `<p style="color:var(--text-faint)">${guidance} 위의 사주 원국 데이터는 정상적으로 계산되었습니다.</p>`;
   }
   DriveLog.logRecordToDrive(result, aiText);
   finishFakeProgress();
